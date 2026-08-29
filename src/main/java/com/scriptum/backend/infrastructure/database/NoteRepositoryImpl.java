@@ -4,6 +4,7 @@ import com.scriptum.backend.domain.entities.Note;
 import com.scriptum.backend.domain.entities.Tag;
 import com.scriptum.backend.domain.repositories.INoteRepository;
 import com.scriptum.backend.infrastructure.database.repository.INotesJpaRepository;
+import com.scriptum.backend.infrastructure.database.repository.IUserJpaRepository;
 import com.scriptum.backend.infrastructure.database.jpa.Notes;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 public class NoteRepositoryImpl implements INoteRepository {
 
     private final INotesJpaRepository notesJpaRepository;
+    private final IUserJpaRepository userJpaRepository;
 
     @Override
     public List<Note> findAllByUserId(UUID userId) {
@@ -90,6 +92,7 @@ public class NoteRepositoryImpl implements INoteRepository {
                 .title(note.getTitle())
                 .pinned(note.isPinned())
                 .content(note.getContent())
+                .user(userJpaRepository.getReferenceById(note.getUserId()))
                 .build();
     }
     

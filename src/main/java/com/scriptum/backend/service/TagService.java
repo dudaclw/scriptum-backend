@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 public class TagService {
 
     private final ITagRepository tagRepository;
+    private final UserService userService;
 
     public List<Tag> getAllTagsByUserId(UUID userId) {
         return tagRepository.findAllByUserId(userId);
@@ -29,8 +30,15 @@ public class TagService {
     }
 
     public Tag getTagById(UUID id) {
-        return tagRepository.findById(id)
+        Tag tag = tagRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Tag not found with id: " + id));
+
+        // Same "not found" response for a missing tag and someone else's tag, so IDs can't be enumerated
+        if (!tag.getUserId().equals(userService.getCurrentUserId())) {
+            throw new BadRequestException("Tag not found with id: " + id);
+        }
+
+        return tag;
     }
 
     public TagResponseBody getTagResponseById(UUID id) {
@@ -107,10 +115,11 @@ public class TagService {
     }
 
     public Tag mapToEntity(TagRequestBody requestBody) {
+        // userId is derived from the authenticated principal, never trusted from the request body
         return Tag.builder()
                 .name(requestBody.getName())
                 .color(requestBody.getColor())
-                .userId(requestBody.getUserId())
+                .userId(userService.getCurrentUserId())
                 .build();
     }
 

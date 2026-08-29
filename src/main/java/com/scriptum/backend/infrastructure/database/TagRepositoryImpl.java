@@ -3,6 +3,7 @@ package com.scriptum.backend.infrastructure.database;
 import com.scriptum.backend.domain.entities.Tag;
 import com.scriptum.backend.domain.repositories.ITagRepository;
 import com.scriptum.backend.infrastructure.database.repository.ITagJpaRepository;
+import com.scriptum.backend.infrastructure.database.repository.IUserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class TagRepositoryImpl implements ITagRepository {
 
     private final ITagJpaRepository tagJpaRepository;
+    private final IUserJpaRepository userJpaRepository;
 
     @Override
     public List<Tag> findAllByUserId(UUID userId) {
@@ -69,15 +71,14 @@ public class TagRepositoryImpl implements ITagRepository {
     }
 
     private com.scriptum.backend.infrastructure.database.jpa.Tag mapToTagJpa(Tag tag) {
-        com.scriptum.backend.infrastructure.database.jpa.Tag tagJpa = 
+        com.scriptum.backend.infrastructure.database.jpa.Tag tagJpa =
             com.scriptum.backend.infrastructure.database.jpa.Tag.builder()
                 .id(tag.getId())
                 .name(tag.getName())
                 .color(tag.getColor())
+                .user(userJpaRepository.getReferenceById(tag.getUserId()))
                 .build();
-        
-        // User would need to be set separately
-        
+
         return tagJpa;
     }
 }

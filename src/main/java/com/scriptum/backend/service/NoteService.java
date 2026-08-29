@@ -23,6 +23,7 @@ public class NoteService {
 
     private final INoteRepository noteRepository;
     private final ITagRepository tagRepository;
+    private final UserService userService;
 
     public List<Note> getAllNotesByUserId(UUID userId) {
         return noteRepository.findAllByUserId(userId);
@@ -34,8 +35,15 @@ public class NoteService {
     }
 
     public Note getNoteById(UUID id) {
-        return noteRepository.findById(id)
+        Note note = noteRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Note not found with id: " + id));
+
+        // Same "not found" response for a missing note and someone else's note, so IDs can't be enumerated
+        if (!note.getUserId().equals(userService.getCurrentUserId())) {
+            throw new BadRequestException("Note not found with id: " + id);
+        }
+
+        return note;
     }
 
     public NoteResponseBody getNoteResponseById(UUID id) {
@@ -121,10 +129,11 @@ public class NoteService {
     }
 
     public Note mapToEntity(NoteRequestBody requestBody) {
+        // userId is derived from the authenticated principal, never trusted from the request body
         return Note.builder()
                 .title(requestBody.getTitle())
                 .content(requestBody.getContent())
-                .userId(requestBody.getUserId())
+                .userId(userService.getCurrentUserId())
                 .build();
     }
 

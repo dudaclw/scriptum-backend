@@ -1,10 +1,14 @@
 package com.scriptum.backend.service;
 
+import com.scriptum.backend.configuration.exception.BadRequestException;
 import com.scriptum.backend.domain.request.UserRequestBody;
 import com.scriptum.backend.domain.response.UserResponseBody;
 import com.scriptum.backend.infrastructure.database.repository.IUserJpaRepository;
 import com.scriptum.backend.infrastructure.database.jpa.UserJpaEntity;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +54,17 @@ public class UserService {
         UserJpaEntity user = findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return mapToResponseBody(user);
+    }
+
+    public UUID getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetails userDetails)) {
+            throw new BadRequestException("Authentication required");
+        }
+
+        return findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"))
+                .getId();
     }
 
     @Transactional
