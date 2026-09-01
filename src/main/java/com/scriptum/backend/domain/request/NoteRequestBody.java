@@ -3,6 +3,7 @@ package com.scriptum.backend.domain.request;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,6 +30,7 @@ public class NoteRequestBody {
     @NotNull(message = "User ID is required")
     private UUID userId;
 
+    @Size(max = 5, message = "A note can have at most 5 tags")
     private List<TagRef> tags = new ArrayList<>();
 
     public record TagRef(String name, String color) {}
