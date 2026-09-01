@@ -4,6 +4,7 @@ import com.scriptum.backend.domain.entities.Note;
 import com.scriptum.backend.domain.entities.Tag;
 import com.scriptum.backend.domain.repositories.INoteRepository;
 import com.scriptum.backend.infrastructure.database.repository.INotesJpaRepository;
+import com.scriptum.backend.infrastructure.database.repository.ITagJpaRepository;
 import com.scriptum.backend.infrastructure.database.repository.IUserJpaRepository;
 import com.scriptum.backend.infrastructure.database.jpa.Notes;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class NoteRepositoryImpl implements INoteRepository {
 
     private final INotesJpaRepository notesJpaRepository;
     private final IUserJpaRepository userJpaRepository;
+    private final ITagJpaRepository tagJpaRepository;
 
     @Override
     public List<Note> findAllByUserId(UUID userId) {
@@ -77,6 +79,7 @@ public class NoteRepositoryImpl implements INoteRepository {
                 .title(notes.getTitle())
                 .content(notes.getContent())
                 .pinned(notes.isPinned())
+                .color(notes.getColor())
                 .userId(notes.getUser() != null ? notes.getUser().getId() : null)
                 .createdAt(notes.getCreatedAt())
                 .modifiedAt(notes.getModifiedAt())
@@ -92,7 +95,11 @@ public class NoteRepositoryImpl implements INoteRepository {
                 .title(note.getTitle())
                 .pinned(note.isPinned())
                 .content(note.getContent())
+                .color(note.getColor())
                 .user(userJpaRepository.getReferenceById(note.getUserId()))
+                .tags(note.getTags().stream()
+                        .map(tag -> tagJpaRepository.getReferenceById(tag.getId()))
+                        .collect(Collectors.toSet()))
                 .build();
     }
     

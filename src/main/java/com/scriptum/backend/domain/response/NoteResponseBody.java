@@ -1,5 +1,6 @@
 package com.scriptum.backend.domain.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,6 +20,11 @@ public class NoteResponseBody {
     private String title;
 
     private String content;
+
+    private String color;
+
+    @JsonProperty("isPinned")
+    private boolean pinned;
 
     private UUID userId;
 

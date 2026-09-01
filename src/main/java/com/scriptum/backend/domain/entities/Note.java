@@ -25,6 +25,8 @@ public class Note {
 
     private boolean pinned;
 
+    private String color;
+
     private UUID userId;
     
     private LocalDateTime createdAt;

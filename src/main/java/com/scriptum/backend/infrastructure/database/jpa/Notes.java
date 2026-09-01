@@ -44,6 +44,9 @@ public class Notes extends BaseEntity {
     @Column(name = "PINNED")
     private boolean pinned;
 
+    @Column(name = "COLOR")
+    private String color;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USER_ID", nullable = false, updatable = false)
     private UserJpaEntity user;

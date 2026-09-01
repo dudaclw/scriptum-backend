@@ -79,12 +79,7 @@ public class NoteService {
     }
 
     @Transactional
-    public Note createNote(Note note, Set<UUID> tagIds) {
-        Set<Tag> tags = tagIds.stream()
-                .map(tagId -> tagRepository.findById(tagId)
-                        .orElseThrow(() -> new BadRequestException("Tag not found with id: " + tagId)))
-                .collect(Collectors.toSet());
-
+    public Note createNote(Note note, Set<Tag> tags) {
         note.setTags(tags);
         return noteRepository.save(note);
     }
@@ -92,23 +87,21 @@ public class NoteService {
     @Transactional
     public NoteResponseBody createNoteFromRequest(NoteRequestBody requestBody) {
         Note note = mapToEntity(requestBody);
-        Note createdNote = createNote(note, requestBody.getTagIds());
+        Set<Tag> tags = resolveTags(requestBody.getTags());
+        Note createdNote = createNote(note, tags);
         return mapToResponseBody(createdNote);
     }
 
     @Transactional
-    public Note updateNote(UUID id, Note noteDetails, Set<UUID> tagIds) {
+    public Note updateNote(UUID id, Note noteDetails, Set<Tag> tags) {
         Note existingNote = getNoteById(id);
 
         existingNote.setTitle(noteDetails.getTitle());
         existingNote.setContent(noteDetails.getContent());
+        existingNote.setColor(noteDetails.getColor());
+        existingNote.setPinned(noteDetails.isPinned());
 
-        if (tagIds != null) {
-            Set<Tag> tags = tagIds.stream()
-                    .map(tagId -> tagRepository.findById(tagId)
-                            .orElseThrow(() -> new BadRequestException("Tag not found with id: " + tagId)))
-                    .collect(Collectors.toSet());
-
+        if (tags != null) {
             existingNote.setTags(tags);
         }
 
@@ -118,8 +111,27 @@ public class NoteService {
     @Transactional
     public NoteResponseBody updateNoteFromRequest(UUID id, NoteRequestBody requestBody) {
         Note note = mapToEntity(requestBody);
-        Note updatedNote = updateNote(id, note, requestBody.getTagIds());
+        Set<Tag> tags = resolveTags(requestBody.getTags());
+        Note updatedNote = updateNote(id, note, tags);
         return mapToResponseBody(updatedNote);
+    }
+
+    // Notes are tagged by name from the client (free-typed, not pre-created), so
+    // attaching a tag means find-or-create by name for the current user.
+    private Set<Tag> resolveTags(List<NoteRequestBody.TagRef> tagRefs) {
+        if (tagRefs == null) {
+            return Set.of();
+        }
+
+        UUID userId = userService.getCurrentUserId();
+        return tagRefs.stream()
+                .map(ref -> tagRepository.findByUserIdAndName(userId, ref.name())
+                        .orElseGet(() -> tagRepository.save(Tag.builder()
+                                .name(ref.name())
+                                .color(ref.color())
+                                .userId(userId)
+                                .build())))
+                .collect(Collectors.toSet());
     }
 
     @Transactional
@@ -133,6 +145,8 @@ public class NoteService {
         return Note.builder()
                 .title(requestBody.getTitle())
                 .content(requestBody.getContent())
+                .color(requestBody.getColor())
+                .pinned(requestBody.isPinned())
                 .userId(userService.getCurrentUserId())
                 .build();
     }
@@ -142,6 +156,8 @@ public class NoteService {
         responseBody.setId(note.getId());
         responseBody.setTitle(note.getTitle());
         responseBody.setContent(note.getContent());
+        responseBody.setColor(note.getColor());
+        responseBody.setPinned(note.isPinned());
         responseBody.setUserId(note.getUserId());
         responseBody.setCreatedAt(note.getCreatedAt());
         responseBody.setModifiedAt(note.getModifiedAt());
