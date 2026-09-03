@@ -1,15 +1,20 @@
 package com.scriptum.backend.infrastructure.database;
 
+import com.scriptum.backend.configuration.exception.BadRequestException;
 import com.scriptum.backend.domain.entities.Note;
 import com.scriptum.backend.domain.entities.Tag;
 import com.scriptum.backend.domain.repositories.INoteRepository;
-import com.scriptum.backend.infrastructure.database.repository.INotesJpaRepository;
 import com.scriptum.backend.infrastructure.database.jpa.Notes;
+import com.scriptum.backend.infrastructure.database.repository.INotesJpaRepository;
+import com.scriptum.backend.infrastructure.database.repository.ITagJpaRepository;
+import com.scriptum.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -18,6 +23,8 @@ import java.util.stream.Collectors;
 public class NoteRepositoryImpl implements INoteRepository {
 
     private final INotesJpaRepository notesJpaRepository;
+    private final ITagJpaRepository tagJpaRepository;
+    private final UserService userService;
 
     @Override
     public List<Note> findAllByUserId(UUID userId) {
@@ -88,11 +95,30 @@ public class NoteRepositoryImpl implements INoteRepository {
         return Notes.builder()
                 .id(note.getId())
                 .title(note.getTitle())
-                .pinned(note.isPinned())
                 .content(note.getContent())
+                .pinned(note.isPinned())
+                .user(userService.findByIdOrElseThrow(note.getUserId()))
+                .tags(resolveTagEntities(note.getTags()))
                 .build();
     }
-    
+
+    /**
+     * Reloads the note's tags as managed JPA entities.
+     *
+     * <p>The NOTE_TAGS join table can only be written from entities the persistence
+     * context knows about, so the domain tags are resolved by id rather than rebuilt.
+     */
+    private Set<com.scriptum.backend.infrastructure.database.jpa.Tag> resolveTagEntities(Set<Tag> tags) {
+        if (tags == null || tags.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        return tags.stream()
+                .map(tag -> tagJpaRepository.findById(tag.getId())
+                        .orElseThrow(() -> new BadRequestException("Tag not found with id: " + tag.getId())))
+                .collect(Collectors.toSet());
+    }
+
     private Tag mapToTag(com.scriptum.backend.infrastructure.database.jpa.Tag tagJpa) {
         return Tag.builder()
                 .id(tagJpa.getId())
