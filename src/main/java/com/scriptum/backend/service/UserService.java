@@ -1,7 +1,7 @@
 package com.scriptum.backend.service;
 
 import com.scriptum.backend.configuration.exception.BadRequestException;
-import com.scriptum.backend.domain.request.UserRequestBody;
+import com.scriptum.backend.domain.request.UserUpdateRequestBody;
 import com.scriptum.backend.domain.response.UserResponseBody;
 import com.scriptum.backend.infrastructure.database.repository.IUserJpaRepository;
 import com.scriptum.backend.infrastructure.database.jpa.UserJpaEntity;
@@ -68,7 +68,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseBody updateUser(UUID id, UserRequestBody request) {
+    public UserResponseBody updateUser(UUID id, UserUpdateRequestBody request) {
         // Verify user exists
         UserJpaEntity user = findByIdOrElseThrow(id);
 

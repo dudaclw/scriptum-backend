@@ -1,6 +1,6 @@
 package com.scriptum.backend.api.controllers;
 
-import com.scriptum.backend.domain.request.UserRequestBody;
+import com.scriptum.backend.domain.request.UserUpdateRequestBody;
 import com.scriptum.backend.domain.response.UserResponseBody;
 import com.scriptum.backend.service.UserService;
 import jakarta.validation.Valid;
@@ -42,7 +42,7 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseBody> updateUser(
             @PathVariable UUID id,
-            @Valid @RequestBody UserRequestBody request) {
+            @Valid @RequestBody UserUpdateRequestBody request) {
         UserResponseBody response = userService.updateUser(id, request);
         return ResponseEntity.ok(response);
     }
