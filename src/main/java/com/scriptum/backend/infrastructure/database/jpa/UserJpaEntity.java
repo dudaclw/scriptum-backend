@@ -31,7 +31,7 @@ public class UserJpaEntity extends BaseEntity {
     @Column(name = "PASSWORD", nullable = false)
     private String password;
 
-    @Column(name = "AVATAR_URL")
+    @Column(name = "AVATAR_URL", columnDefinition = "TEXT")
     private String avatarUrl;
 
     @Column(name = "EMAIL_VERIFIED")
