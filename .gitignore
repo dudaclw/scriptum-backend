@@ -1,3 +1,35 @@
-/target/**
+# Build output
+/target/
+*.class
 
-.class
+# Local configuration holding real credentials. Never commit these.
+*.env
+.env
+.env.*
+application-local.properties
+application-local.yml
+src/main/resources/application-local.properties
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+nbproject/private/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven wrapper: the scripts and properties are committed on purpose so CI and
+# every contributor build with the same Maven version. Only the downloaded jar
+# is excluded.
+.mvn/wrapper/maven-wrapper.jar

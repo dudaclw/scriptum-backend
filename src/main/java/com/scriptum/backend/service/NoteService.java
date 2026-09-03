@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -72,12 +73,7 @@ public class NoteService {
 
     @Transactional
     public Note createNote(Note note, Set<UUID> tagIds) {
-        Set<Tag> tags = tagIds.stream()
-                .map(tagId -> tagRepository.findById(tagId)
-                        .orElseThrow(() -> new BadRequestException("Tag not found with id: " + tagId)))
-                .collect(Collectors.toSet());
-
-        note.setTags(tags);
+        note.setTags(resolveTags(tagIds));
         return noteRepository.save(note);
     }
 
@@ -95,16 +91,23 @@ public class NoteService {
         existingNote.setTitle(noteDetails.getTitle());
         existingNote.setContent(noteDetails.getContent());
 
+        // A null tagIds means "leave the current tags alone"; an empty set clears them.
         if (tagIds != null) {
-            Set<Tag> tags = tagIds.stream()
-                    .map(tagId -> tagRepository.findById(tagId)
-                            .orElseThrow(() -> new BadRequestException("Tag not found with id: " + tagId)))
-                    .collect(Collectors.toSet());
-
-            existingNote.setTags(tags);
+            existingNote.setTags(resolveTags(tagIds));
         }
 
         return noteRepository.save(existingNote);
+    }
+
+    private Set<Tag> resolveTags(Set<UUID> tagIds) {
+        if (tagIds == null) {
+            return new HashSet<>();
+        }
+
+        return tagIds.stream()
+                .map(tagId -> tagRepository.findById(tagId)
+                        .orElseThrow(() -> new BadRequestException("Tag not found with id: " + tagId)))
+                .collect(Collectors.toSet());
     }
 
     @Transactional
@@ -116,7 +119,7 @@ public class NoteService {
 
     @Transactional
     public void deleteNote(UUID id) {
-        getNoteById(id); // Check if note exists
+        getNoteById(id);
         noteRepository.deleteById(id);
     }
 

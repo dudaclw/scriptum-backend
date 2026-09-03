@@ -11,10 +11,14 @@ import java.util.Date;
 @Service
 public class JwtService {
     
-    @Value("${jwt.secret:c2VjcmV0MTIzc2VjcmV0MTIzc2VjcmV0MTIzc2VjcmV0MTIz}")
+    /**
+     * No default. A fallback here would silently sign production tokens with a key
+     * committed to the repository, which is the same as having no signature at all.
+     */
+    @Value("${jwt.secret}")
     private String secretKey;
-    
-    @Value("${jwt.expiration:86400000}")
+
+    @Value("${jwt.expiration}")
     private long jwtExpiration;
 
     private SecretKey getSigningKey() {

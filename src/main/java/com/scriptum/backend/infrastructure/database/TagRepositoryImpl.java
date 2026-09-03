@@ -3,6 +3,7 @@ package com.scriptum.backend.infrastructure.database;
 import com.scriptum.backend.domain.entities.Tag;
 import com.scriptum.backend.domain.repositories.ITagRepository;
 import com.scriptum.backend.infrastructure.database.repository.ITagJpaRepository;
+import com.scriptum.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class TagRepositoryImpl implements ITagRepository {
 
     private final ITagJpaRepository tagJpaRepository;
+    private final UserService userService;
 
     @Override
     public List<Tag> findAllByUserId(UUID userId) {
@@ -68,16 +70,19 @@ public class TagRepositoryImpl implements ITagRepository {
                 .build();
     }
 
+    /**
+     * Maps a domain tag onto its JPA entity, binding the owning user.
+     *
+     * <p>The owner must be resolved here: a tag persisted with a null USER_ID is
+     * invisible to every findByUserId* query, which in turn lets duplicate tag
+     * names through the uniqueness check in {@code TagService}.
+     */
     private com.scriptum.backend.infrastructure.database.jpa.Tag mapToTagJpa(Tag tag) {
-        com.scriptum.backend.infrastructure.database.jpa.Tag tagJpa = 
-            com.scriptum.backend.infrastructure.database.jpa.Tag.builder()
+        return com.scriptum.backend.infrastructure.database.jpa.Tag.builder()
                 .id(tag.getId())
                 .name(tag.getName())
                 .color(tag.getColor())
+                .user(userService.findByIdOrElseThrow(tag.getUserId()))
                 .build();
-        
-        // User would need to be set separately
-        
-        return tagJpa;
     }
 }
