@@ -30,11 +30,33 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # `verify` runs the whole lifecycle: compile, test, package, then the
-      # JaCoCo gate. The executable jar is in target/ once this step finishes,
-      # so nothing needs packaging again later.
-      - name: Build, test and check coverage
-        run: ./mvnw --batch-mode --no-transfer-progress verify
+      # One layer per step, in the order the Maven lifecycle defines: unit tests
+      # in `test`, then integration and system tests in `integration-test`.
+      # A failing layer stops the ones after it, and the step name says which
+      # one broke without anyone reading the log.
+      #
+      # The skip properties keep each step to its own layer, so nothing is run
+      # twice. All three share the same target/ directory, which is what lets
+      # the coverage of every layer add up.
+      - name: Unit tests
+        run: ./mvnw --batch-mode --no-transfer-progress test
+
+      - name: Integration tests
+        run: >-
+          ./mvnw --batch-mode --no-transfer-progress verify
+          -DskipUnitTests=true
+          -DskipSystemTests=true
+          -Djacoco.haltOnFailure=false
+
+      # The gate runs here and nowhere else: this is the first point where
+      # coverage from all three layers has been merged. Earlier steps measure
+      # a subset, so enforcing a threshold there would fail on work that is
+      # simply not done yet.
+      - name: System tests and coverage gate
+        run: >-
+          ./mvnw --batch-mode --no-transfer-progress verify
+          -DskipUnitTests=true
+          -DskipIntegrationTests=true
 
       - name: Summarise coverage
         if: always()
@@ -123,8 +145,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: surefire-reports
-          path: target/surefire-reports/
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
           retention-days: 7
 
       - name: Upload coverage report
