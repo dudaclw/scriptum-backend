@@ -1,5 +1,6 @@
 package com.scriptum.backend.infrastructure.security;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +12,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -22,6 +24,9 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
@@ -31,43 +36,48 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        final String authHeader = request.getHeader("Authorization");
+        final String authHeader = request.getHeader(AUTHORIZATION_HEADER);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        final String jwt = authHeader.substring(7);
-
-        // Um JWT inválido/expirado nunca deve derrubar o request com 500 — só
-        // significa "não autenticado", e a cadeia de segurança/controller
-        // decide o que fazer a partir daí (401/403, ou seguir anônimo).
-        try {
-            final String userEmail = jwtService.extractEmail(jwt);
-
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-
-                if (jwtService.isTokenValid(jwt)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                }
-            }
-        } catch (RuntimeException e) {
-            // Cobre ExpiredJwtException, MalformedJwtException, SignatureException,
-            // UsernameNotFoundException etc. — nunca deixar o filtro derrubar o
-            // request por causa de um token externo malformado/expirado.
-            log.debug("Ignorando JWT inválido: {}", e.getMessage());
+        if (authHeader != null
+                && authHeader.startsWith(BEARER_PREFIX)
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
+            authenticate(request, authHeader.substring(BEARER_PREFIX.length()));
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Authenticates the request from a bearer token, or leaves it anonymous.
+     *
+     * <p>A rejected token is never an error here: the request simply continues
+     * unauthenticated and the authorization layer turns that into a 401. Throwing
+     * would surface a 500 to the caller for what is ordinary invalid input.
+     */
+    private void authenticate(HttpServletRequest request, String jwt) {
+        try {
+            if (!jwtService.isTokenValid(jwt)) {
+                return;
+            }
+
+            String userEmail = jwtService.extractEmail(jwt);
+            if (userEmail == null) {
+                return;
+            }
+
+            UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    userDetails,
+                    null,
+                    userDetails.getAuthorities()
+            );
+            authToken.setDetails(
+                    new WebAuthenticationDetailsSource().buildDetails(request)
+            );
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException exception) {
+            log.debug("Rejected bearer token on {}: {}", request.getRequestURI(), exception.getMessage());
+        }
     }
 }
