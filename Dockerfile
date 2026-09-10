@@ -1,4 +1,4 @@
-FROM maven:3.9-amazoncorretto-17 AS builder
+FROM maven:3.9-amazoncorretto-21 AS builder
 WORKDIR /build
 
 COPY pom.xml .
@@ -6,7 +6,7 @@ COPY src ./src
 
 RUN mvn clean package -DskipTests
 
-FROM amazoncorretto:17-alpine-jdk
+FROM amazoncorretto:21-alpine-jdk
 WORKDIR /app
 
 COPY --from=builder /build/target/*.jar app.jar
