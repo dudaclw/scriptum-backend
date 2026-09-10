@@ -58,7 +58,14 @@
         -->
         <skipUnitTests>false</skipUnitTests>
         <skipIntegrationTests>false</skipIntegrationTests>
-        <skipSystemTests>false</skipSystemTests>
+
+        <!--
+            System tests are off by default and turned on by the `system-tests`
+            profile. They boot Tomcat on a real port and are the slowest layer,
+            so `mvn verify` stays usable during development and the pipeline
+            stage that runs them is the only thing that pays for them.
+        -->
+        <skipSystemTests>true</skipSystemTests>
 
         <!-- Set by jacoco:prepare-agent-integration; empty when jacoco is skipped. -->
         <failsafeArgLine/>
@@ -380,5 +387,19 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+            Adds the system test layer on top of the others:
+            `./mvnw -Psystem-tests verify` runs unit, integration and system.
+            Used by the system stage of the CI pipeline.
+        -->
+        <profile>
+            <id>system-tests</id>
+            <properties>
+                <skipSystemTests>false</skipSystemTests>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>
